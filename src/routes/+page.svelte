@@ -40,6 +40,22 @@
 
 		const vertices = hexagon.getVertices();
 
+		// 绘制发光效果
+		ctx.shadowBlur = 20;
+		ctx.shadowColor = '#3b82f6';
+		
+		// 绘制外层光晕
+		ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+		ctx.lineWidth = 8;
+		ctx.beginPath();
+		ctx.moveTo(vertices[0].x, vertices[0].y);
+		for (let i = 1; i < vertices.length; i++) {
+			ctx.lineTo(vertices[i].x, vertices[i].y);
+		}
+		ctx.closePath();
+		ctx.stroke();
+
+		// 绘制主要轮廓
 		ctx.strokeStyle = '#3b82f6';
 		ctx.lineWidth = 3;
 		ctx.beginPath();
@@ -49,6 +65,9 @@
 		}
 		ctx.closePath();
 		ctx.stroke();
+
+		// 重置阴影
+		ctx.shadowBlur = 0;
 	}
 
 	/**
@@ -57,19 +76,79 @@
 	function drawBall() {
 		if (!ctx) return;
 
-		ctx.fillStyle = '#ef4444';
+		// 绘制外层光晕
+		const gradient = ctx.createRadialGradient(
+			ball.position.x, ball.position.y, 0,
+			ball.position.x, ball.position.y, ball.radius * 2.5
+		);
+		gradient.addColorStop(0, 'rgba(239, 68, 68, 0.8)');
+		gradient.addColorStop(0.5, 'rgba(239, 68, 68, 0.3)');
+		gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+		
+		ctx.fillStyle = gradient;
+		ctx.beginPath();
+		ctx.arc(ball.position.x, ball.position.y, ball.radius * 2.5, 0, Math.PI * 2);
+		ctx.fill();
+
+		// 绘制主体
+		const ballGradient = ctx.createRadialGradient(
+			ball.position.x - ball.radius * 0.3,
+			ball.position.y - ball.radius * 0.3,
+			ball.radius * 0.1,
+			ball.position.x,
+			ball.position.y,
+			ball.radius
+		);
+		ballGradient.addColorStop(0, '#fca5a5');
+		ballGradient.addColorStop(0.7, '#ef4444');
+		ballGradient.addColorStop(1, '#dc2626');
+		
+		ctx.shadowBlur = 15;
+		ctx.shadowColor = '#ef4444';
+		ctx.fillStyle = ballGradient;
 		ctx.beginPath();
 		ctx.arc(ball.position.x, ball.position.y, ball.radius, 0, Math.PI * 2);
 		ctx.fill();
+		ctx.shadowBlur = 0;
 
-		// 绘制速度向量(调试用)
-		ctx.strokeStyle = '#10b981';
-		ctx.lineWidth = 2;
+		// 绘制速度向量(调试用) - 增强视觉效果
+		const velocityEnd = ball.position.add(ball.velocity.multiply(0.1));
+		
+		// 绘制模糊的速度轨迹
+		ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+		ctx.lineWidth = 6;
 		ctx.beginPath();
 		ctx.moveTo(ball.position.x, ball.position.y);
-		const velocityEnd = ball.position.add(ball.velocity.multiply(0.1));
 		ctx.lineTo(velocityEnd.x, velocityEnd.y);
 		ctx.stroke();
+		
+		// 绘制清晰的速度箭头
+		ctx.strokeStyle = '#10b981';
+		ctx.lineWidth = 2;
+		ctx.shadowBlur = 10;
+		ctx.shadowColor = '#10b981';
+		ctx.beginPath();
+		ctx.moveTo(ball.position.x, ball.position.y);
+		ctx.lineTo(velocityEnd.x, velocityEnd.y);
+		ctx.stroke();
+		ctx.shadowBlur = 0;
+		
+		// 绘制箭头
+		const angle = Math.atan2(velocityEnd.y - ball.position.y, velocityEnd.x - ball.position.x);
+		const arrowSize = 8;
+		ctx.fillStyle = '#10b981';
+		ctx.beginPath();
+		ctx.moveTo(velocityEnd.x, velocityEnd.y);
+		ctx.lineTo(
+			velocityEnd.x - arrowSize * Math.cos(angle - Math.PI / 6),
+			velocityEnd.y - arrowSize * Math.sin(angle - Math.PI / 6)
+		);
+		ctx.lineTo(
+			velocityEnd.x - arrowSize * Math.cos(angle + Math.PI / 6),
+			velocityEnd.y - arrowSize * Math.sin(angle + Math.PI / 6)
+		);
+		ctx.closePath();
+		ctx.fill();
 	}
 
 	/**
@@ -108,8 +187,14 @@
 			ball.bounceOffWall(collision.normal, wallVelocity);
 		}
 
-		// 清空画布
-		ctx.fillStyle = '#1e293b';
+		// 清空画布 - 使用渐变背景
+		const bgGradient = ctx.createRadialGradient(
+			WIDTH / 2, HEIGHT / 2, 0,
+			WIDTH / 2, HEIGHT / 2, Math.max(WIDTH, HEIGHT) / 2
+		);
+		bgGradient.addColorStop(0, '#1e293b');
+		bgGradient.addColorStop(1, '#0f172a');
+		ctx.fillStyle = bgGradient;
 		ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
 		// 绘制场景
@@ -155,31 +240,84 @@
 		align-items: center;
 		justify-content: center;
 		min-height: 100vh;
-		background: #0f172a;
+		background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
 		color: #e2e8f0;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.container::before {
+		content: '';
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		height: 200%;
+		background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+		animation: rotate 20s linear infinite;
+	}
+
+	@keyframes rotate {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	h1 {
-		margin-bottom: 1rem;
-		font-size: 2rem;
-		font-weight: 600;
+		margin-bottom: 2rem;
+		font-size: 2.5rem;
+		font-weight: 700;
+		background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+		position: relative;
+		z-index: 1;
 	}
 
 	canvas {
-		border: 2px solid #334155;
-		border-radius: 8px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+		border: 2px solid rgba(59, 130, 246, 0.3);
+		border-radius: 12px;
+		box-shadow: 
+			0 0 20px rgba(59, 130, 246, 0.2),
+			0 8px 16px rgba(0, 0, 0, 0.4),
+			inset 0 0 60px rgba(59, 130, 246, 0.05);
+		position: relative;
+		z-index: 1;
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+	}
+
+	canvas:hover {
+		transform: scale(1.01);
+		box-shadow: 
+			0 0 30px rgba(59, 130, 246, 0.4),
+			0 12px 24px rgba(0, 0, 0, 0.5),
+			inset 0 0 60px rgba(59, 130, 246, 0.08);
 	}
 
 	.info {
-		margin-top: 1rem;
+		margin-top: 2rem;
 		text-align: center;
 		color: #94a3b8;
-		font-size: 0.9rem;
+		font-size: 0.95rem;
+		position: relative;
+		z-index: 1;
+		line-height: 1.6;
 	}
 
 	.info p {
-		margin: 0.25rem 0;
+		margin: 0.5rem 0;
+		opacity: 0.9;
+		transition: opacity 0.3s ease;
+	}
+
+	.info p:hover {
+		opacity: 1;
+		color: #cbd5e1;
 	}
 </style>
