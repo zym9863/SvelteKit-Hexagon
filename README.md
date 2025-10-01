@@ -1,3 +1,5 @@
+[English](README-EN.md)
+
 # SvelteKit-Hexagon
 
 这是一个基于 SvelteKit 的六边形可视化项目，使用 TypeScript 和 Vite 构建。
